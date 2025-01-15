@@ -1,0 +1,106 @@
+<!-- index.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saini Chat App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #messages {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            height: 300px;
+            overflow-y: scroll;
+            background-color: black;
+            color: white;
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+        }
+        #username-form {
+            margin-bottom: 20px;
+        }
+        #typing{
+            display:none; position: absolute; bottom: 0; left: 0; width: 100%; padding: 10px; text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Saini Chat</h1>
+    
+    <!-- Username Input Form -->
+    <div id="username-form">
+        <label for="username">Enter your name:</label>
+        <input id="username" type="text" placeholder="Type your name..." autocomplete="off">
+        <button id="submitName">Submit</button>
+    </div>
+
+    <!-- Chat Interface -->
+    <div id="chat-interface" style="display:none;">
+        <div id="messages">
+            <div id="typing"></div>
+        </div>
+        <input id="inputMessage" type="text" placeholder="Type a message..." autocomplete="off">
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io();
+        var username = '';
+
+        // Handle name submission
+        document.getElementById('submitName').addEventListener('click', function() {
+            username = document.getElementById('username').value.trim();
+            if (username) {
+                // Hide the name form and show the chat interface
+                document.getElementById('username-form').style.display = 'none';
+                document.getElementById('chat-interface').style.display = 'block';
+
+                // Emit a 'join' event to the server with the username
+                socket.emit('join', username);
+            } else {
+                alert('Please enter a valid name');
+            }
+        });
+
+        // Listen for chat messages from the server
+        socket.on('chat message', function(msg) {
+            var item = document.createElement('div');
+            item.textContent = msg;
+            document.getElementById('messages').appendChild(item);
+            window.scrollTo(0, document.body.scrollHeight);
+            document.getElementById('typing').style.display = 'none'
+        });
+
+        socket.on('typing', function(user){
+            if(username != user){
+                document.getElementById('typing').textContent = `${user} is typing...`
+                document.getElementById('typing').style.display = "block"
+            }
+            
+            if (user == ''){
+                document.getElementById('typing').style.display = 'none'
+            }
+        })
+
+        document.getElementById('inputMessage').addEventListener('input', function(event) {
+            event.target.value.length > 0 ? socket.emit('typing', username) : socket.emit('typing', '')
+        })
+
+        // Send message when user hits "Enter"
+        document.getElementById('inputMessage').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                var message = event.target.value;
+                socket.emit('chat message', username + ': ' + message);  // Include username with message
+                event.target.value = '';  // Clear the input field
+            }
+        });
+    </script>
+</body>
+</html>
